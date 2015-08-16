@@ -11,7 +11,6 @@ void drop_privileges()
 {
 	struct passwd *user;
 	struct rlimit limit;
-	
 	if (!geteuid()) {
 		user = getpwnam("nobody");
 		if (!user) {
@@ -56,7 +55,7 @@ void drop_privileges()
 void set_process_name(const char *name, int argc, char *argv[])
 {
 	char *start, *end;
-	
+
 	prctl(PR_SET_NAME, name);
 	end = argv[argc - 1] + strlen(argv[argc - 1]);
 	strcpy(argv[0], name);

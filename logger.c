@@ -1,11 +1,11 @@
 /*
  * logger.c
- * 
+ *
  * Copyright 2012 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
- * 
+ *
  * Logs keys with evdev.
- * 
- * 
+ *
+ *
  * TODO:
  *   - Get delay time between key key repeat from X server.
  *
@@ -20,6 +20,7 @@
 #include "keymap.h"
 #include "evdev.h"
 #include "process.h"
+#include "util.h"
 
 
 int main(int argc, char *argv[])
@@ -27,7 +28,7 @@ int main(int argc, char *argv[])
 	char buffer[256];
 	char event_device[256];
 	char *log_file, *pid_file, *process_name, option;
-	int evdev_fd, daemonize, force_us_keymap, option_index;
+	int evdev_fd, daemonize, force_us_keymap, option_index, log_time;
 	FILE *log, *pid;
 	struct input_event ev;
 	struct input_event_state state;
@@ -36,6 +37,7 @@ int main(int argc, char *argv[])
 		{"daemonize", no_argument, NULL, 'd'},
 		{"foreground", no_argument, NULL, 'f'},
 		{"force-us-keymap", no_argument, NULL, 'u'},
+		{"log-time", no_argument, NULL, 't'},
 		{"event-device", required_argument, NULL, 'e'},
 		{"log-file", required_argument, NULL, 'l'},
 		{"pid-file", required_argument, NULL, 'p'},
@@ -46,6 +48,7 @@ int main(int argc, char *argv[])
 
 	strcpy(event_device, "auto");
 	log_file = 0;
+	log_time = 0;
 	log = stdout;
 	pid_file = 0;
 	process_name = 0;
@@ -54,7 +57,7 @@ int main(int argc, char *argv[])
 
 	close(STDIN_FILENO);
 
-	while ((option = getopt_long(argc, argv, "dfue:l:p:n:h", long_options, &option_index)) != -1) {
+	while ((option = getopt_long(argc, argv, "dfute:l:p:n:h", long_options, &option_index)) != -1) {
 		switch (option) {
 			case 'd':
 				daemonize = 1;
@@ -64,6 +67,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'u':
 				force_us_keymap = 1;
+				break;
+			case 't':
+				log_time = 1;
 				break;
 			case 'e':
 				strncpy(event_device, optarg, sizeof(event_device));
@@ -86,6 +92,7 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "  -f, --foreground                    run in the foreground (default)\n");
 				fprintf(stderr, "  -u, --force-us-keymap               instead of auto-detection, force usage of built-in US keymap\n");
 				fprintf(stderr, "  -e DEVICE, --event-device=DEVICE    use event device DEVICE (default=auto-detect)\n");
+				fprintf(stderr, "  -t --log-time                       write timestamp to log\n");
 				fprintf(stderr, "  -l FILE, --log-file=FILE            write key log to FILE (default=stdout)\n");
 				fprintf(stderr, "  -p FILE, --pid-file=FILE            write the pid of the process to FILE\n");
 				fprintf(stderr, "  -n NAME, --process-name=NAME        change process name in ps and top to NAME\n");
@@ -138,7 +145,7 @@ int main(int argc, char *argv[])
 		}
 		fclose(pid);
 	}
-	
+
 	/* DO NOT REMOVE ME! */
 	drop_privileges();
 
@@ -148,14 +155,18 @@ int main(int argc, char *argv[])
 	memset(&state, 0, sizeof(state));
 	while (read(evdev_fd, &ev, sizeof(ev)) > 0) {
 		if (translate_event(&ev, &state, buffer, sizeof(buffer)) > 0) {
-			fprintf(log, "%s", buffer);
+			if (log_time == 1) {
+				fprintf(log, "%ju %s\n", get_timestamp(), buffer);
+			} else {
+				fprintf(log, "%s", buffer);
+			}
 			fflush(log);
 		}
 	}
-	
+
 	fclose(log);
 	close(evdev_fd);
-	
+
 	perror("read");
 	return EXIT_FAILURE;
 }

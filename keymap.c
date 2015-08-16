@@ -32,7 +32,7 @@ static wchar_t func_keys[][8] = {
 /* c = character key
  * f = function key
  * _ = blank/error
- * 
+ *
  * Source: KEY_* defines from <linux/input.h>
  */
 static const char char_or_func[] =
@@ -74,7 +74,7 @@ static int to_char_keys_index(unsigned int keycode)
 		return keycode - 7;
 	if (keycode == KEY_102ND) // key right to the left of 'Z' on US layout
 		return 47;
-	
+
 	return -1; // not character keycode
 }
 /* Translates function keys keycodes to continuous array indexes. */
@@ -98,7 +98,7 @@ static int to_func_keys_index(unsigned int keycode)
 		return keycode - 65;
 	if (keycode >= KEY_LEFTMETA && keycode <= KEY_COMPOSE) // 125-127
 		return keycode - 70;
-	
+
 	return -1; // not function key keycode
 }
 
@@ -110,20 +110,20 @@ size_t translate_event(struct input_event *event, struct input_event_state *stat
 {
 	wchar_t wch, *wbuffer;
 	size_t wbuffer_len, len;
-	
+
 	len = 0;
 	wbuffer = (wchar_t*)buffer;
 	wbuffer_len = buffer_len / sizeof(wchar_t);
-	
+
 	if (event->type != EV_KEY)
 		goto out;
-	
+
 	if (event->code >= sizeof(char_or_func)) {
 		len += swprintf(&wbuffer[len], wbuffer_len, L"<E-%x>", event->code);
 		goto out;
 	}
-	
-	if (event->value == EV_MAKE || event->value == EV_REPEAT) {		
+
+	if (event->value == EV_MAKE || event->value == EV_REPEAT) {
 		if (event->code == KEY_LEFTSHIFT || event->code == KEY_RIGHTSHIFT) {
 			state->shift = 1;
 			goto out;
@@ -164,7 +164,7 @@ size_t translate_event(struct input_event *event, struct input_event_state *stat
 					else
 						wch = char_keys[to_char_keys_index(event->code)];
 				}
-			} 
+			}
 			else if (state->shift) {
 				wch = shift_keys[to_char_keys_index(event->code)];
 				if (wch == L'\0')
@@ -172,7 +172,7 @@ size_t translate_event(struct input_event *event, struct input_event_state *stat
 			}
 			else
 				wch = char_keys[to_char_keys_index(event->code)];
-			
+
 			if (wch != L'\0') {
 				len += swprintf(&wbuffer[len], wbuffer_len, L"%lc", wch);
 				goto out;
@@ -199,7 +199,7 @@ size_t translate_event(struct input_event *event, struct input_event_state *stat
 		else if (event->code == KEY_LEFTMETA || event->code == KEY_RIGHTMETA)
 			state->meta = 0;
 	}
-	
+
 out:
 	if (!len)
 		*buffer = 0;
@@ -233,13 +233,13 @@ int load_system_keymap()
 			continue;
 		if (buffer[0] == 'k') {
 			index = to_char_keys_index(keycode);
-			
+
 			start = &buffer[14];
 			wch = (wchar_t)strtoul(start, &end, 16);
 			if (start[0] == '+' && (wch & 0xB00))
 				wch ^= 0xB00;
 			char_keys[index] = wch;
-			
+
 			start = end;
 			while (start[0] == ' ' && start[0] != '\0')
 				++start;
@@ -252,14 +252,14 @@ int load_system_keymap()
 					wch = L'\0';
 			}
 			shift_keys[index] = wch;
-			
+
 			start = end;
 			while (start[0] == ' ' && start[0] != '\0')
 				++start;
 			wch = (wchar_t)strtoul(start, &end, 16);
 			if (start[0] == '+' && (wch & 0xB00))
 				wch ^= 0xB00;
-			altgr_keys[index] = wch;			
+			altgr_keys[index] = wch;
 		} else {
 			index = to_char_keys_index(keycode == 0 ? 0 : --keycode);
 			wch = (wchar_t)strtoul(&buffer[21], NULL, 16);
